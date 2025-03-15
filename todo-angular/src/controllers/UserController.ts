@@ -1,16 +1,18 @@
 import { Request, Response } from "express";
+import { body, validationResult } from "express-validator";
 import User from "../models/Users";
 
 class UserController {
-  // Créer un utilisateur
+  // Créer un utilisateur avec validation
   async createUser(req: Request, res: Response): Promise<Response> {
+    // Vérifier les erreurs de validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
       const { username, email, password } = req.body;
-
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: "Tous les champs sont obligatoires" });
-      }
-
       const user = await User.create({ username, email, password });
       return res.status(201).json({ message: "Utilisateur créé", user });
     } catch (error) {
@@ -42,10 +44,16 @@ class UserController {
     }
   }
 
-  // Mettre à jour un utilisateur
+  // Mettre à jour un utilisateur avec validation
   async updateUser(req: Request, res: Response): Promise<Response> {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { id } = req.params;
     const { username, email, password } = req.body;
+
     try {
       const user = await User.findByPk(id);
       if (!user) {
@@ -79,5 +87,12 @@ class UserController {
     }
   }
 }
+
+// Middleware de validation pour les routes
+export const validateUser = [
+  body('username').notEmpty().withMessage('Le nom d\'utilisateur est requis'),
+  body('email').isEmail().withMessage('Email invalide'),
+  body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères')
+];
 
 export default new UserController();
