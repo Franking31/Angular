@@ -1,11 +1,11 @@
 import express from 'express';
 import multer from 'multer';
-import { check, validationResult } from 'express-validator'; // Ajout de express-validator
+import { check, validationResult } from 'express-validator';
 import Task from '../models/tasks';
-import { TaskStatus } from '../models/tasks'; // Importation de l'énumération
+import { TaskStatus } from '../models/tasks';
 import path from 'path';
-import Project from '../models/Project'; // Pour vérifier l'existence du projet
-import taskController from '../controllers/taskcontroller'; // Importation du TaskController
+import Project from '../models/Project';
+import taskController from '../controllers/taskcontroller';
 
 const router = express.Router();
 
@@ -39,7 +39,7 @@ const validateTaskCreation = [
     .withMessage('L\'ID du projet doit être un entier'),
   check('status')
     .optional()
-    .isIn(Object.values(TaskStatus))
+    .isIn(Object.values(TaskStatus)) // Utilise les valeurs réelles de l'énumération
     .withMessage(`Le statut doit être l'une des valeurs suivantes : ${Object.values(TaskStatus).join(', ')}`),
   check('plannedEndDate')
     .optional()
@@ -99,7 +99,7 @@ router.post(
         description,
         projectId,
         imageUrl,
-        status: status || TaskStatus.New,
+        status: status || TaskStatus.New, // Utilisation de la valeur par défaut
         startDate: new Date(),
         endDate: plannedEndDate ? new Date(plannedEndDate) : null,
       });
@@ -117,7 +117,7 @@ router.get(
   "/:id",
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const task = await taskController.getTaskById(req, res as any); // Réutilisation de la logique de TaskController
+      const task = await taskController.getTaskById(req, res as any);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Une erreur est survenue lors de la récupération de la tâche", error });
@@ -137,7 +137,7 @@ router.put(
     }
 
     try {
-      const task = await taskController.updateTask(req, res as any); // Réutilisation de la logique de TaskController
+      const task = await taskController.updateTask(req, res as any);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Une erreur est survenue lors de la mise à jour de la tâche", error });
@@ -150,7 +150,7 @@ router.patch(
   "/:id/start",
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const task = await taskController.startTask(req, res as any); // Réutilisation de la logique de TaskController
+      const task = await taskController.startTask(req, res as any);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Une erreur est survenue lors du démarrage de la tâche", error });
@@ -163,7 +163,7 @@ router.patch(
   "/:id/complete",
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const task = await taskController.completeTask(req, res as any); // Réutilisation de la logique de TaskController
+      const task = await taskController.completeTask(req, res as any);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Une erreur est survenue lors de la complétion de la tâche", error });
@@ -176,7 +176,7 @@ router.delete(
   "/:id",
   async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const task = await taskController.deleteTask(req, res as any); // Réutilisation de la logique de TaskController
+      const task = await taskController.deleteTask(req, res as any);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Une erreur est survenue lors de la suppression de la tâche", error });
