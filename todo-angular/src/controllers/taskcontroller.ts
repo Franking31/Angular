@@ -1,8 +1,32 @@
 import { Request, Response } from "express";
-import Task from "../models/tasks"; // Assurez-vous que le modèle Task est bien importé
-import { TaskStatus } from "../models/tasks"; // Importation de l'énumération TaskStatus
+import { check, validationResult } from "express-validator"; // Ajout de express-validator
+import Task from "../models/tasks";
+import { TaskStatus } from "../models/tasks";
+import Project from "../models/Project"; // Ajout pour vérifier l'existence du projet
 
 class TaskController {
+  // Middleware de validation pour createTask
+  private validateCreateTask = [
+    check("title")
+      .notEmpty()
+      .withMessage("Le titre de la tâche est requis")
+      .isString()
+      .withMessage("Le titre doit être une chaîne de caractères"),
+    check("description")
+      .optional()
+      .isString()
+      .withMessage("La description doit être une chaîne de caractères"),
+    check("plannedEndDate")
+      .optional()
+      .isISO8601()
+      .withMessage("La date de fin planifiée doit être une date valide au format ISO 8601"),
+    check("projectId")
+      .notEmpty()
+      .withMessage("L'ID du projet est requis")
+      .isInt()
+      .withMessage("L'ID du projet doit être un entier")
+  ];
+
   /**
    * Créer une nouvelle tâche
    * @param req 
@@ -10,12 +34,24 @@ class TaskController {
    * @returns 
    */
   async createTask(req: Request, res: Response): Promise<Response> {
+    // Vérification des erreurs de validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
       const { title, description, plannedEndDate, projectId } = req.body;
 
       // Vérifier si l'image est bien présente dans la requête
       if (!req.file) {
         return res.status(400).json({ message: "L'image est obligatoire" });
+      }
+
+      // Vérifier si le projet existe
+      const project = await Project.findByPk(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Projet non trouvé" });
       }
 
       const imageUrl = `/uploads/${req.file.filename}`;
@@ -27,9 +63,9 @@ class TaskController {
         completed: false,
         imageUrl,
         projectId,
-        status: TaskStatus.New, // Utilisation de l'énumération TaskStatus
+        status: TaskStatus.New,
         startDate: new Date(),
-        endDate: plannedEndDate,
+        endDate: plannedEndDate ? new Date(plannedEndDate) : null,
       });
 
       return res.status(201).json({ message: "Tâche créée", task });
@@ -60,6 +96,26 @@ class TaskController {
     }
   }
 
+  // Middleware de validation pour updateTask
+  private validateUpdateTask = [
+    check("title")
+      .optional()
+      .isString()
+      .withMessage("Le titre doit être une chaîne de caractères"),
+    check("description")
+      .optional()
+      .isString()
+      .withMessage("La description doit être une chaîne de caractères"),
+    check("status")
+      .optional()
+      .isIn(Object.values(TaskStatus))
+      .withMessage(`Le statut doit être l'une des valeurs suivantes : ${Object.values(TaskStatus).join(", ")}`),
+    check("plannedEndDate")
+      .optional()
+      .isISO8601()
+      .withMessage("La date de fin planifiée doit être une date valide au format ISO 8601")
+  ];
+
   /**
    * Mettre à jour une tâche
    * @param req 
@@ -67,6 +123,12 @@ class TaskController {
    * @returns 
    */
   async updateTask(req: Request, res: Response): Promise<Response> {
+    // Vérification des erreurs de validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
       const { id } = req.params;
       const { title, description, status, plannedEndDate } = req.body;
@@ -80,8 +142,8 @@ class TaskController {
       // Mise à jour des propriétés de la tâche
       task.title = title || task.title;
       task.description = description || task.description;
-      task.status = status || task.status; // Utilisation de TaskStatus si nécessaire
-      task.endDate = plannedEndDate || task.endDate;
+      task.status = status || task.status;
+      task.endDate = plannedEndDate ? new Date(plannedEndDate) : task.endDate;
 
       await task.save();
 
@@ -106,7 +168,7 @@ class TaskController {
         return res.status(404).json({ message: `Tâche avec l'ID ${id} non trouvée` });
       }
 
-      if (task.status === TaskStatus.New) { // Utilisation de TaskStatus
+      if (task.status === TaskStatus.New) {
         task.status = TaskStatus.IN_PROGRESS;
         task.startDate = new Date();
         await task.save();
@@ -134,7 +196,7 @@ class TaskController {
         return res.status(404).json({ message: `Tâche avec l'ID ${id} non trouvée` });
       }
 
-      if (task.status === TaskStatus.IN_PROGRESS) { // Utilisation de TaskStatus
+      if (task.status === TaskStatus.IN_PROGRESS) {
         task.status = TaskStatus.COMPLETED;
         task.endDate = new Date();
         await task.save();
@@ -172,4 +234,5 @@ class TaskController {
   }
 }
 
-export default new TaskController();
+export default new TaskController
+();
